@@ -212,14 +212,6 @@ Agentic Workflow Design/
 
 ---
 
-## Screenshots
-
-### Workflow Diagram
-The following screenshot displays the n8n node configuration:
-![Workflow Screenshot](file:///Users/mayank/Downloads/Agentic%20Workflow%20Design/Screenshot%202026-06-04%20at%2015.13.24.png)
-
----
-
 ## Future Improvements
 
 - Add database storage (e.g., PostgreSQL or Supabase) to keep track of processed emails instead of relying entirely on unread status.
