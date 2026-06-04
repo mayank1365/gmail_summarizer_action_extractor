@@ -1,202 +1,287 @@
 # Gmail Summarizer & Action-Item Extractor
 
-## Overview
-An automated agentic workflow built in n8n that reads unread emails from multiple Gmail accounts, filters out spam, newsletters, and promotional content, extracts action items and priorities, and sends a daily digest directly to WhatsApp.
-
----
-
-## Problem Statement
-As students, we get a lot of cluttered emails: some related to internships, some related to college assignments, and some unrelated ads that we signed up for once and now have to deal with everyday newsletters.
+## 1. Problem Statement
 
 ### Target User
-Anyone that is fed up with reading hundreds of emails every few hours.
+Students, professionals, and anyone who receives a large volume of emails daily across multiple Gmail accounts.
 
 ### Pain Point
-Receiving a lot of useless emails and having no way to filter and clear them on a case-by-case basis.
+Users often miss important emails related to internships, assignments, interviews, meetings, deadlines, and work because their inboxes are flooded with newsletters, promotions, spam, OTPs, and other low-value messages.
+
+### Why It Matters
+Missing an important email can lead to missed opportunities, deadlines, or delayed responses. Constantly checking email inboxes is time-consuming and reduces productivity.
 
 ### Solution
-This workflow solves just that: it executes every 2 hours (can be changed to any amount of time), reads the emails received in this time, and gives the notification in a structured way on the user's WhatsApp.
+An AI-powered workflow that automatically collects unread emails from multiple Gmail accounts, filters irrelevant content, extracts actionable information, prioritizes important emails, and sends a concise digest directly to WhatsApp.
 
 ### Expected Output
-It gives a heading of the email, 2-3 line summary, priority, and action required for that email, and ignores useless emails.
+A WhatsApp notification containing:
+* Email title
+* Short summary
+* Action required
+* Deadline (if any)
+* Priority level
 
 ---
 
-## Workflow Architecture
+## 2. Workflow Breakdown
 
-### High-Level Flow
+### Input
+* Unread emails from Gmail Account 1
+* Unread emails from Gmail Account 2
+
+**Data extracted:**
+* Sender
+* Subject
+* Email body snippet
+* Timestamp
+
+---
+
+### Processing Steps
+
+#### Step 1: Schedule Trigger
+The workflow runs automatically every 2 hours.
+
+#### Step 2: Gmail Retrieval
+Unread emails are fetched from two separate Gmail accounts simultaneously.
+
+#### Step 3: Inbox Cleanup
+Retrieved emails are marked as read immediately to avoid duplicate processing.
+
+#### Step 4: Merge Data
+Emails from both accounts are combined into a single stream.
+
+#### Step 5: Data Transformation
+A JavaScript node extracts only relevant fields:
+* Gmail ID
+* Sender
+* Subject
+* Body
+* Date
+
+#### Step 6: AI Analysis
+Claude Opus 4.6 analyzes all emails and:
+* Removes spam
+* Removes promotions
+* Removes newsletters
+* Removes duplicate information
+* Extracts action items
+* Determines urgency
+* Generates structured summaries
+
+#### Step 7: Message Formatting
+A JavaScript node extracts the final text response from the AI model output.
+
+#### Step 8: Delivery
+Twilio sends the summarized digest to WhatsApp.
+
+---
+
+## 3. Workflow Architecture
+
 Below is the execution flow of the n8n workflow:
 
+![Workflow Screenshot](workflow_image.png)
+
 ```text
-┌─────────────────────────────┐
-│ Schedule Trigger            │
-│ Runs Every 2 Hours          │
-└──────────────┬──────────────┘
-               │
-     ┌─────────┴─────────┐
-     ▼                   ▼
-┌───────────────┐ ┌───────────────┐
-│ Scaler Gmail  │ │ Main Gmail    │
-│ Fetch Unread  │ │ Fetch Unread  │
-└───────┬───────┘ └───────┬───────┘
-        │                 │
-        ▼                 ▼
-┌───────────────┐ ┌───────────────┐
-│ Mark as Read  │ │ Mark as Read  │
-└───────┬───────┘ └───────┬───────┘
-        │                 │
-        └────────┬────────┘
-                 ▼
-        ┌─────────────────┐
-        │ Merge Node      │
-        └────────┬────────┘
-                 ▼
-        ┌─────────────────┐
-        │ JS Code Node    │
-        │ Extract Fields  │
-        └────────┬────────┘
-                 ▼
-        ┌─────────────────┐
-        │ Claude Opus 4.6 │
-        └────────┬────────┘
-                 ▼
-        ┌─────────────────┐
-        │ JS Code Node    │
-        │ Format Response │
-        └────────┬────────┘
-                 ▼
-        ┌─────────────────┐
-        │ Twilio          │
-        │ WhatsApp Alert  │
-        └─────────────────┘
+Schedule Trigger
+        │
+ ┌──────┴──────┐
+ │             │
+ ▼             ▼
+Gmail 1     Gmail 2
+ │             │
+ ▼             ▼
+Mark Read   Mark Read
+ │             │
+ └──────┬──────┘
+        ▼
+      Merge
+        │
+        ▼
+ JavaScript
+(Data Cleaning)
+        │
+        ▼
+ Claude Opus 4.6
+(AI Agent)
+        │
+        ▼
+ JavaScript
+(Message Format)
+        │
+        ▼
+ Twilio WhatsApp
 ```
 
 ---
 
-## Agentic Design
+## 4. Agentic Practices Demonstrated
 
-The workflow uses an LLM-based agent pattern to perform semantic filtering and structuring:
+### Agent Role Definition
 
-### Agent 1: Email Action-Item Extractor (Anthropic Claude Opus 4.6)
-**Purpose:** Acts as a cognitive filter and summary generator. It distinguishes between newsletters/spam (which are discarded) and actionable emails.
-
-**Input:**
-- List of unread emails (with metadata: sender, subject, date, body snippet).
-
-**Prompt Rules:**
-- Extract ONLY useful/actionable emails.
-- Ignore test emails, spam, promotions, newsletters, random chats, OTPs, and meaningless content.
-- Remove duplicate information.
-- Format strictly into a clean WhatsApp template.
-
-**Output:**
-- A concise WhatsApp message containing:
-  - 📌 [Short Title]
-  - Summary: [ONE short sentence]
-  - Action: [ONE clear action item or "None"]
-  - Deadline: [date or "None"]
-  - Priority: [Low/Medium/High/Critical]
+#### Agent: Email Intelligence Agent
+**Responsibilities:**
+1. **Email Classification:** Important / Non-important.
+2. **Information Extraction:** Key message, Required actions, Deadlines.
+3. **Prioritization:** Low, Medium, High, Critical.
+4. **Summarization:** Convert long emails into concise actionable summaries.
 
 ---
 
-## AI Components
+### Structured Output
+The AI is instructed to return data in a consistent structure:
+```text
+📌 Title
 
-| Component | Purpose |
-|------------|----------|
-| Anthropic Node (Claude Opus) | Performs semantic analysis of all unread emails to filter out clutter, extract action items, assign priority, and format details. |
+Summary: ...
+
+Action: ...
+
+Deadline: ...
+
+Priority: ...
+
+---
+```
 
 ---
 
-## Deterministic Components
-
-| Component | Purpose |
-|------------|----------|
-| Schedule Trigger | Triggers the workflow every 2 hours to keep the user updated. |
-| Gmail API Nodes (`main` & `scaler`) | Pulls up to 30 unread emails received after a specified checkpoint. |
-| Gmail API Mark-as-Read | Automatically marks messages as read to prevent reprocessing. |
-| Merge Node | Merges unread emails fetched from multiple Gmail accounts. |
-| JavaScript (n8n Code Nodes) | Cleans incoming JSON metadata and extracts text responses for Twilio. |
-| Twilio API Node | Formats and delivers the final text message to the user's WhatsApp number. |
+### Tool Usage
+* **Gmail API:** Used to retrieve unread emails.
+* **Anthropic Claude Opus 4.6:** Used for reasoning and email understanding.
+* **Twilio API:** Used to deliver notifications through WhatsApp.
+* **JavaScript Nodes:** Used for preprocessing and postprocessing.
 
 ---
 
-## Tools & Integrations
+### Routing & Workflow Control
 
-- **n8n**: Workflow orchestration engine.
-- **Gmail API**: Email inbox access.
-- **Anthropic API (Claude Opus 4.6)**: Advanced reasoning and parsing.
-- **Twilio API**: WhatsApp Business API connection.
+#### Deterministic Logic
+Used for:
+* Scheduling execution
+* Fetching emails
+* Marking emails as read
+* Merging data
+* Formatting messages
+* Sending WhatsApp notifications
 
----
+#### AI Logic
+Used for:
+* Spam detection
+* Importance classification
+* Action extraction
+* Priority assignment
+* Summarization
 
-## Workflow Steps
-
-### Step 1: Triggering
-The schedule trigger initiates the workflow execution at the specified intervals (configured for every 2 hours).
-
-### Step 2: Parallel Gmail Ingestion
-The workflow retrieves up to 30 unread emails from two separate configured Gmail accounts (`scaler` and `main`).
-
-### Step 3: Inbox Management
-Simultaneously, the workflow marks the fetched emails as read in the respective Gmail inboxes to maintain inbox hygiene.
-
-### Step 4: Data Merging & Transformation
-Emails from both inboxes are merged. The JS code node extracts and sanitizes essential fields: `gmailId`, `from`, `subject`, `body`, and `date`.
-
-### Step 5: AI Summarization & Filtering
-The structured email list is forwarded to the Anthropic Claude node, which filters out noise and constructs the WhatsApp digest.
-
-### Step 6: Text Normalization
-A second JS code node parses the LLM output, extracting raw text and cleaning the format.
-
-### Step 7: Delivery
-The finalized message is sent to the user's WhatsApp number via Twilio.
+This separation ensures AI is only used where reasoning is required.
 
 ---
 
-## Sample Input
+### Fallback Handling
+
+* **Empty Inbox:** If no actionable emails exist, the AI outputs `No important emails found.`
+* **Duplicate Prevention:** Emails are marked as read immediately after retrieval.
+* **Noise Filtering:** Promotional and irrelevant emails are discarded before reaching the user.
+
+---
+
+## 5. AI vs Deterministic Components
+
+| Component | Type | Purpose |
+| :--- | :--- | :--- |
+| Schedule Trigger | Deterministic | Run every 2 hours |
+| Gmail Fetch Nodes | Deterministic | Retrieve unread emails |
+| Mark as Read Nodes | Deterministic | Prevent duplicate processing |
+| Merge Node | Deterministic | Combine email streams |
+| JavaScript Nodes | Deterministic | Data transformation |
+| Claude Opus 4.6 | AI | Email understanding and summarization |
+| Twilio WhatsApp | Deterministic | Deliver final notification |
+
+---
+
+## 6. Practical Usefulness
+This workflow helps users:
+* Reduce inbox overload
+* Avoid missing deadlines
+* Track internship opportunities
+* Monitor assignments
+* Receive important updates faster
+* Save time spent checking emails
+
+---
+
+## 7. Sample Input
 
 ```json
 [
   {
-    "gmailId": "msg_12345",
     "from": "careers@google.com",
-    "subject": "Google Software Engineering Internship Interview Schedule",
-    "body": "Hi student, congratulations! We'd like to schedule your first round interview. Please pick a slot on our Calendly link by June 10, 2026...",
-    "date": "2026-06-04T10:00:00Z"
-  },
-  {
-    "gmailId": "msg_67890",
-    "from": "newsletter@spammyads.com",
-    "subject": "50% off on all items! Buy now!",
-    "body": "Special offer only for you! Don't miss this limited-time sale...",
-    "date": "2026-06-04T10:15:00Z"
+    "subject": "Interview Invitation",
+    "body": "Please schedule your interview before June 10."
   }
 ]
 ```
 
-## Sample Output
+---
 
-```
-📌 Google Internship Interview
-Summary: Received interview scheduling invitation from Google Careers.
-Action: Choose interview slot on the provided Calendly link.
-Deadline: June 10, 2026
+## 8. Sample Output
+
+```text
+📌 Google Interview Invitation
+
+Summary: Google has invited you for an interview.
+
+Action: Schedule interview using provided link.
+
+Deadline: June 10
+
 Priority: Critical
 ```
 
 ---
 
-## Error Handling
+## 9. Human-in-the-Loop
+Although the workflow is automated, the user acts as the final decision-maker.
 
-- **Parallel Run Safe:** Gmail messages are marked as read in parallel as they are processed, ensuring they aren't parsed twice in case of downstream failures.
-- **Empty Inbox Handling:** If no actionable or important emails are found, the LLM outputs "No important emails found.", and Twilio sends this status.
+The user reviews:
+* Important emails
+* Suggested actions
+* Deadlines
+
+and decides whether to act on them.
 
 ---
 
-## Human-in-the-Loop
+## 10. Future Improvements
+1. Add Google Calendar integration for automatic deadline tracking.
+2. Store processed emails in PostgreSQL/Supabase.
+3. Support Outlook and Yahoo Mail.
+4. Add Telegram and Discord notifications.
+5. Auto-create tasks in Notion or Todoist.
+6. Introduce multiple specialized agents:
+   * Internship Agent
+   * Assignment Agent
+   * Finance Agent
+   * Meeting Agent
 
-The workflow is fully automated. The user acts as the human-in-the-loop by reviewing the alerts on their WhatsApp and manually taking the action items requested (e.g., booking an interview slot, completing an assignment).
+---
+
+## 11. Individual Contribution
+* **Designed:** Overall workflow architecture and multi-account Gmail ingestion system.
+* **Implemented:** Gmail integrations, merge logic, JavaScript processing nodes, and Twilio WhatsApp integration.
+* **Engineered:** Claude Opus prompt, email classification strategy, priority assignment framework, and action-item extraction methodology.
+* **Tested:** End-to-end workflow execution, WhatsApp delivery, and email filtering accuracy.
+
+---
+
+## 12. Learning Outcomes
+* Built a complete agentic workflow using n8n.
+* Applied AI only where semantic reasoning was required.
+* Used deterministic logic for workflow control and validation.
+* Integrated multiple external services (Gmail, Anthropic, Twilio).
+* Designed a practical productivity-focused automation solution.
 
 ---
 
@@ -212,27 +297,7 @@ Agentic Workflow Design/
 
 ---
 
-## Future Improvements
-
-- Add database storage (e.g., PostgreSQL or Supabase) to keep track of processed emails instead of relying entirely on unread status.
-- Implement Telegram or Discord bot alternative destinations.
-- Integrate calendar auto-booking for identified deadlines.
-
----
-
-## Learning Outcomes
-
-- Configured parallel multi-inbox Gmail extraction in n8n.
-- Implemented LLM-based semantic filtering to distinguish critical emails from newsletter noise.
-- Connected n8n with Anthropic LangChain nodes and external webhook messaging (Twilio WhatsApp).
-
----
-
 ## Author
-
-Name: Mayank Gupta
-
-Student ID: 10069
-
-Contribution:
-Designed and implemented the complete workflow, prompts, routing logic, integrations, and testing.
+* **Name:** Mayank Gupta
+* **Student ID:** 10069
+* **Contribution:** Designed and implemented the complete workflow, prompts, routing logic, integrations, and testing.
