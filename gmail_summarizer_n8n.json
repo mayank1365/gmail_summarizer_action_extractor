@@ -1,0 +1,360 @@
+{
+  "name": "gmail summarizer",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 2
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -160,
+        16
+      ],
+      "id": "91201d5d-c8cd-4a44-b46c-aa482417dfdb",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        288,
+        16
+      ],
+      "id": "bf9025ba-1d4c-4c77-83ab-2beae6a6f30b",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  return {\n    json: {\n      gmailId: item.json.id,\n      from: item.json.from,\n      subject: item.json.subject,\n      body: item.json.snippet || item.json.textPlain || \"\",\n      date: item.json.internalDate\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        16
+      ],
+      "id": "089b82e1-490e-4695-aa18-ea9fe352e4de",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-nano",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-NANO"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=You are an email action-item extraction system.\n\nYour job:\n\n* Extract ONLY useful/actionable emails.\n* Ignore test emails, spam, promotions, newsletters, random chats, OTPs, and meaningless content.\n* Remove duplicate information.\n* Be concise.\n\nOUTPUT RULES:\n\n* No intro text.\n* No outro text.\n* No explanations.\n* No markdown formatting.\n* No \"Here is your digest\".\n* No greetings.\n* No filler text.\n* Keep each email under 5 lines.\n* Use clean WhatsApp formatting.\n\nFORMAT STRICTLY:\n\n📌 [Short Title]\n\nSummary: [ONE short sentence]\n\nAction: [ONE clear action item or \"None\"]\n\nDeadline: [date or \"None\"]\n\nPriority: [Low/Medium/High/Critical]\n\n---\n\nIf no meaningful/actionable emails exist, output:\n\"No important emails found.\"\n\nEMAILS:\n{{ JSON.stringify($json) }}\n"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        -160,
+        -400
+      ],
+      "id": "694ffa77-ae8f-42cd-a467-4cd42e93f18a",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "MQvrpMsTQL4fyeoa",
+          "name": "n8n free OpenAI API credits"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "from": "=+14155238886",
+        "to": "=+919606036429",
+        "toWhatsapp": true,
+        "message": "={{ $json.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1312,
+        16
+      ],
+      "id": "9f5795e6-5f5f-4c4b-b88e-71557a91790c",
+      "name": "Send an SMS/MMS/WhatsApp message",
+      "credentials": {
+        "twilioApi": {
+          "id": "VEzmblobXcj4vmU2",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        288,
+        208
+      ],
+      "id": "1c74e9e8-b85b-4a84-a43c-ff67a3dbb65e",
+      "name": "Mark a message as read",
+      "webhookId": "24e7122f-96e8-4f50-a00d-21c58b314a76",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bE7qIz3mGNtvNX8L",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst structuredMessage = items.map((item) => {\n  return {\n    message: item.json.content.map((contentItem) => contentItem.text).join(\" \"),\n  };\n});\nreturn structuredMessage;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1088,
+        16
+      ],
+      "id": "c3dbfeb0-233f-4519-af6d-d01850f1b3ea",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        288,
+        -176
+      ],
+      "id": "344afff9-f501-4735-88a0-4bd991aa54ed",
+      "name": "Mark a message as read1",
+      "webhookId": "687664be-83f4-4b9a-b3e3-4de27ed43e9b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "cEuM5ANWxkXVQDij",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 30,
+        "filters": {
+          "readStatus": "unread",
+          "receivedAfter": "2026-05-23T00:00:00"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        64,
+        160
+      ],
+      "id": "2c4e6ecf-6822-496c-8708-62939ede0acf",
+      "name": "main",
+      "webhookId": "d21a3418-13aa-4926-b1cc-23347848c046",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bE7qIz3mGNtvNX8L",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 30,
+        "filters": {
+          "readStatus": "unread",
+          "receivedAfter": "2026-05-23T00:00:00"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        64,
+        -128
+      ],
+      "id": "c84a8573-61d4-4df2-b85d-03d3b339bf39",
+      "name": "scaler",
+      "webhookId": "0e910a23-9cff-4de7-903b-7196a5640418",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "cEuM5ANWxkXVQDij",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "claude-opus-4-6",
+          "mode": "list",
+          "cachedResultName": "claude-opus-4-6"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an email action-item extraction system.\n\nYour job:\n\n* Extract ONLY useful/actionable emails.\n* Ignore test emails, spam, promotions, newsletters, random chats, OTPs, and meaningless content.\n* Remove duplicate information.\n* Be concise.\n\nOUTPUT RULES:\n\n* No intro text.\n* No outro text.\n* No explanations.\n* No markdown formatting.\n* No \"Here is your digest\".\n* No greetings.\n* No filler text.\n* Keep each email under 5 lines.\n* Use clean WhatsApp formatting.\n\nFORMAT STRICTLY:\n\n📌 [Short Title]\n\nSummary: [ONE short sentence]\n\nAction: [ONE clear action item or \"None\"]\n\nDeadline: [date or \"None\"]\n\nPriority: [Low/Medium/High/Critical]\n\n---\n\nIf no meaningful/actionable emails exist, output:\n\"No important emails found.\"\n\nEMAILS:\n{{ JSON.stringify($json) }}\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        736,
+        16
+      ],
+      "id": "64ff570c-9119-460f-a591-da7442240aed",
+      "name": "Message a model1",
+      "credentials": {
+        "anthropicApi": {
+          "id": "mkvaKvKVpUfuBk7E",
+          "name": "Anthropic account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "scaler",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "main",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Message a model1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        []
+      ]
+    },
+    "Send an SMS/MMS/WhatsApp message": {
+      "main": [
+        []
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "main": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Mark a message as read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "scaler": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Mark a message as read1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "ee107fce-f374-4e40-90be-46ab1b277921",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6da16867b6c461085ad0e0e470f32a3e354d4e36b5d35d0affbc9f719217b4a6"
+  },
+  "id": "9owT4m1xZBlIeWFf",
+  "tags": []
+}
