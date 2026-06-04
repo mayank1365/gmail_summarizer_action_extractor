@@ -82,8 +82,13 @@ Twilio sends the summarized digest to WhatsApp.
 
 Below is the execution flow of the n8n workflow:
 
+### Node Layout
 ![Workflow Screenshot](workflow_image.jpeg)
 
+### Successful Execution Run
+![Successful Execution](successful_execution.png)
+
+### High-Level Text Flow
 ```text
 Schedule Trigger
         │
@@ -240,6 +245,9 @@ Deadline: June 10
 Priority: Critical
 ```
 
+### WhatsApp Output Screenshot
+![WhatsApp Output](output.png)
+
 ---
 
 ## 9. Human-in-the-Loop
@@ -292,7 +300,9 @@ Agentic Workflow Design/
 │
 ├── gmail_summarizer_n8n.json             # n8n Workflow JSON export
 ├── README.md                             # Documentation
-└── workflow_image.png                    # Workflow visualization screenshot
+├── workflow_image.jpeg                   # Workflow node layout screenshot
+├── successful_execution.png              # Successful execution run screenshot
+└── output.png                            # WhatsApp output digest screenshot
 ```
 
 ---
