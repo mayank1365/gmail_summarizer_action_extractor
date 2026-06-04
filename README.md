@@ -207,7 +207,7 @@ Agentic Workflow Design/
 │
 ├── gmail_summarizer_n8n.json             # n8n Workflow JSON export
 ├── README.md                             # Documentation
-└── Screenshot 2026-06-04 at 15.13.24.png # Workflow visualization screenshot
+└── workflow_image.png                    # Workflow visualization screenshot
 ```
 
 ---
