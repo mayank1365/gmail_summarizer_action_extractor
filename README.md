@@ -82,7 +82,7 @@ Twilio sends the summarized digest to WhatsApp.
 
 Below is the execution flow of the n8n workflow:
 
-![Workflow Screenshot](workflow_image.png)
+![Workflow Screenshot](workflow_image.jpeg)
 
 ```text
 Schedule Trigger
